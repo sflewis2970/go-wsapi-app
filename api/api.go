@@ -4,17 +4,19 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
-	"log"
 	"net/http"
 )
 
 const (
+	RapidAPIHostKey string = "X-RapidAPI-Host"
+	RapidAPIKey     string = "X-RapidAPI-Key"
+	RapidAPIValue   string = "1f8720c0c7msh43fe783209a6813p1833b2jsnc2300c30b9a9"
+
 	QuoteURL          string = "https://quotes-by-api-ninjas.p.rapidapi.com/v1/quotes"
-	DictionaryURL     string = "https://quotes-by-api-ninjas.p.rapidapi.com/v1/dictionary"
-	RapidAPIHostKey   string = "X-RapidAPI-Host"
-	RapidAPIHostValue string = "quotes-by-api-ninjas.p.rapidapi.com"
-	RapidAPIKey       string = "X-RapidAPI-Key"
-	RapidAPIValue     string = "1f8720c0c7msh43fe783209a6813p1833b2jsnc2300c30b9a9"
+	QuoteAPIHostValue string = "quotes-by-api-ninjas.p.rapidapi.com"
+
+	DictionaryURL          string = "https://dictionary-by-api-ninjas.p.rapidapi.com/v1/dictionary"
+	DictionaryAPIHostValue string = "dictionary-by-api-ninjas.p.rapidapi.com"
 )
 
 type QuoteResponse struct {
@@ -23,7 +25,13 @@ type QuoteResponse struct {
 	Category string `json:"category"`
 }
 
-func QuoteRequest(categoryStr string, limitStr string) ([]QuoteResponse, error) {
+type DictionaryResponse struct {
+	Definition string `json:"definition"`
+	Word       string `json:"word"`
+	Valid      bool   `json:"valid"`
+}
+
+func QuoteRequest(categoryStr string, limitStr string) (error, []QuoteResponse) {
 	// Build URL string
 	url := QuoteURL
 
@@ -43,58 +51,65 @@ func QuoteRequest(categoryStr string, limitStr string) ([]QuoteResponse, error) 
 
 	request, requestErr := http.NewRequest("GET", url, nil)
 	if requestErr != nil {
-		return nil, requestErr
+		return requestErr, nil
 	}
 
-	request.Header.Add(RapidAPIHostKey, RapidAPIHostValue)
+	request.Header.Add(RapidAPIHostKey, QuoteAPIHostValue)
 	request.Header.Add(RapidAPIKey, RapidAPIValue)
 
 	response, responseErr := http.DefaultClient.Do(request)
 	if responseErr != nil {
-		return nil, requestErr
+		return requestErr, nil
 	}
 	defer response.Body.Close()
 
 	body, readErr := ioutil.ReadAll(response.Body)
 	if readErr != nil {
-		return nil, readErr
+		return readErr, nil
 	}
 
 	responses := make([]QuoteResponse, 0)
 	unmarshalErr := json.Unmarshal(body, &responses)
 	if unmarshalErr != nil {
-		return nil, unmarshalErr
+		return unmarshalErr, nil
 	}
 
-	return responses, nil
+	return nil, responses
 }
 
-func DictionaryRequest(wordStr string) (*http.Response, error) {
+func DictionaryRequest(wordStr string) (error, DictionaryResponse) {
 	// Build URL string with
 	if len(wordStr) == 0 {
-		return nil, errors.New("word si required")
+		return errors.New("word is required"), DictionaryResponse{}
 	}
 
-	url := DictionaryURL + wordStr
+	url := DictionaryURL + "?word=" + wordStr
 
 	request, requestErr := http.NewRequest("GET", url, nil)
 	if requestErr != nil {
-		return nil, requestErr
+		return requestErr, DictionaryResponse{}
 	}
 
-	request.Header.Add(RapidAPIHostKey, RapidAPIHostValue)
+	request.Header.Add(RapidAPIHostKey, DictionaryAPIHostValue)
 	request.Header.Add(RapidAPIKey, RapidAPIValue)
 
 	response, responseErr := http.DefaultClient.Do(request)
 	if responseErr != nil {
-		return nil, requestErr
+		return requestErr, DictionaryResponse{}
 	}
 	defer response.Body.Close()
 
-	body, _ := ioutil.ReadAll(response.Body)
+	body, readErr := ioutil.ReadAll(response.Body)
+	if readErr != nil {
+		return readErr, DictionaryResponse{}
+	}
 
-	log.Print(response)
-	log.Print(string(body))
+	dictResponse := DictionaryResponse{}
 
-	return response, nil
+	unmarshalErr := json.Unmarshal(body, &dictResponse)
+	if unmarshalErr != nil {
+		return unmarshalErr, DictionaryResponse{}
+	}
+
+	return nil, dictResponse
 }

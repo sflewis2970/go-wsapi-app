@@ -3,6 +3,7 @@ package controllers
 import (
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/websocket"
 	"github.com/sflewis2970/go-wsapi-app/api"
@@ -26,7 +27,7 @@ type WSQuoteResponse struct {
 	Quote    string `json:"quote"`
 	Category string `json:"category"`
 	Author   string `json:"author"`
-	Message  string `json:"message,omitempty"`
+	Warning  string `json:"warning,omitempty"`
 	Error    string `json:"error,omitempty"`
 }
 
@@ -55,10 +56,10 @@ func processQuoteRequest(wsRequest WSRequest) []WSQuoteResponse {
 	} else {
 		// Construct Websocket Response message
 		if len(quoteResponses) == 0 {
-			msg := "No items were returned"
+			warningMsg := "category value may be misspelled or not found"
 			wsQuoteResponse := WSQuoteResponse{
 				Request: wsRequest.Request,
-				Message: msg,
+				Warning: warningMsg,
 			}
 
 			wsQuoteResponses = append(wsQuoteResponses, wsQuoteResponse)
@@ -117,8 +118,8 @@ func socketReader(wsConn *websocket.Conn) {
 		log.Printf("%s received %s request from client\n", wsConn.RemoteAddr(), wsRequest.Request)
 
 		// Prcocess API request
-		switch wsRequest.Request {
-		case "Quote":
+		switch strings.ToLower(wsRequest.Request) {
+		case "quote":
 			wsQuoteResponses := make([]WSQuoteResponse, 0)
 			wsQuoteResponses = processQuoteRequest(wsRequest)
 
@@ -129,7 +130,7 @@ func socketReader(wsConn *websocket.Conn) {
 				return
 			}
 
-		case "Dictionary":
+		case "dictionary":
 			wsDictResponse := processDictionaryRequest(wsRequest)
 
 			// Send response to client

@@ -5,6 +5,9 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
+	"time"
+
+	"github.com/sflewis2970/go-wsapi-app/common"
 )
 
 const (
@@ -31,7 +34,7 @@ type DictionaryResponse struct {
 	Valid      bool   `json:"valid"`
 }
 
-func QuoteRequest(categoryStr string, limitStr string) (error, []QuoteResponse) {
+func QuoteRequest(categoryStr string, limitStr string) (error, []QuoteResponse, string) {
 	// Build URL string
 	url := QuoteURL
 
@@ -49,45 +52,54 @@ func QuoteRequest(categoryStr string, limitStr string) (error, []QuoteResponse) 
 		}
 	}
 
+	// Create new http request
 	request, requestErr := http.NewRequest("GET", url, nil)
 	if requestErr != nil {
-		return requestErr, nil
+		return requestErr, nil, ""
 	}
 
+	// Setup request headers
 	request.Header.Add(RapidAPIHostKey, QuoteAPIHostValue)
 	request.Header.Add(RapidAPIKey, RapidAPIValue)
 
+	// Get response from http request
 	response, responseErr := http.DefaultClient.Do(request)
 	if responseErr != nil {
-		return requestErr, nil
+		return requestErr, nil, ""
 	}
 	defer response.Body.Close()
 
+	// Get timestamp right after receiving a valid request
+	timestamp := common.GetFormattedTime(time.Now(), "Mon Jan 2 15:04:05 2006")
+
+	// Parse request body
 	body, readErr := ioutil.ReadAll(response.Body)
 	if readErr != nil {
-		return readErr, nil
+		return readErr, nil, ""
 	}
 
+	// Parse response into JSON format
 	responses := make([]QuoteResponse, 0)
 	unmarshalErr := json.Unmarshal(body, &responses)
 	if unmarshalErr != nil {
-		return unmarshalErr, nil
+		return unmarshalErr, nil, ""
 	}
 
-	return nil, responses
+	// Return a valid response (in JSON format) as well as a timestamp
+	return nil, responses, timestamp
 }
 
-func DictionaryRequest(wordStr string) (error, DictionaryResponse) {
+func DictionaryRequest(wordStr string) (error, DictionaryResponse, string) {
 	// Build URL string with
 	if len(wordStr) == 0 {
-		return errors.New("word is required"), DictionaryResponse{}
+		return errors.New("word is required"), DictionaryResponse{}, ""
 	}
 
 	url := DictionaryURL + "?word=" + wordStr
 
 	request, requestErr := http.NewRequest("GET", url, nil)
 	if requestErr != nil {
-		return requestErr, DictionaryResponse{}
+		return requestErr, DictionaryResponse{}, ""
 	}
 
 	request.Header.Add(RapidAPIHostKey, DictionaryAPIHostValue)
@@ -95,21 +107,24 @@ func DictionaryRequest(wordStr string) (error, DictionaryResponse) {
 
 	response, responseErr := http.DefaultClient.Do(request)
 	if responseErr != nil {
-		return requestErr, DictionaryResponse{}
+		return requestErr, DictionaryResponse{}, ""
 	}
 	defer response.Body.Close()
 
+	// Get timestamp right after receiving a valid request
+	timestamp := common.GetFormattedTime(time.Now(), "Mon Jan 2 15:04:05 2006")
+
 	body, readErr := ioutil.ReadAll(response.Body)
 	if readErr != nil {
-		return readErr, DictionaryResponse{}
+		return readErr, DictionaryResponse{}, ""
 	}
 
 	dictResponse := DictionaryResponse{}
 
 	unmarshalErr := json.Unmarshal(body, &dictResponse)
 	if unmarshalErr != nil {
-		return unmarshalErr, DictionaryResponse{}
+		return unmarshalErr, DictionaryResponse{}, ""
 	}
 
-	return nil, dictResponse
+	return nil, dictResponse, timestamp
 }

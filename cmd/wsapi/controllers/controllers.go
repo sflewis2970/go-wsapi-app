@@ -23,16 +23,18 @@ type WSRequest struct {
 }
 
 type WSQuoteResponse struct {
-	Request  string `json:"request"`
-	Quote    string `json:"quote"`
-	Category string `json:"category"`
-	Author   string `json:"author"`
-	Warning  string `json:"warning,omitempty"`
-	Error    string `json:"error,omitempty"`
+	Request   string `json:"request"`
+	Timestamp string `json:"timestamp"`
+	Quote     string `json:"quote"`
+	Category  string `json:"category"`
+	Author    string `json:"author"`
+	Warning   string `json:"warning,omitempty"`
+	Error     string `json:"error,omitempty"`
 }
 
 type WSDictionaryResponse struct {
 	Request    string `json:"request"`
+	Timestamp  string `json:"timestamp"`
 	Definition string `json:"definition"`
 	Word       string `json:"word"`
 	Valid      bool   `json:"valid"`
@@ -45,31 +47,35 @@ func processQuoteRequest(wsRequest WSRequest) []WSQuoteResponse {
 
 	// Send request to Public API
 	var wsQuoteResponses []WSQuoteResponse
-	quoteErr, quoteResponses = api.QuoteRequest(wsRequest.Category, wsRequest.Limit)
+	var timestamp string
+	quoteErr, quoteResponses, timestamp = api.QuoteRequest(wsRequest.Category, wsRequest.Limit)
 	if quoteErr != nil {
 		wsQuoteResponse := WSQuoteResponse{
-			Request: wsRequest.Request,
-			Error:   quoteErr.Error(),
+			Request:   wsRequest.Request,
+			Timestamp: timestamp,
+			Error:     quoteErr.Error(),
 		}
 
 		wsQuoteResponses = append(wsQuoteResponses, wsQuoteResponse)
 	} else {
 		// Construct Websocket Response message
 		if len(quoteResponses) == 0 {
-			warningMsg := "category value may be misspelled or not found"
+			warningMsg := "no data returned, category value may be misspelled or not found"
 			wsQuoteResponse := WSQuoteResponse{
-				Request: wsRequest.Request,
-				Warning: warningMsg,
+				Request:   wsRequest.Request,
+				Timestamp: timestamp,
+				Warning:   warningMsg,
 			}
 
 			wsQuoteResponses = append(wsQuoteResponses, wsQuoteResponse)
 		} else {
 			for _, quoteResponse := range quoteResponses {
 				wsQuoteResponse := WSQuoteResponse{
-					Request:  wsRequest.Request,
-					Quote:    quoteResponse.Quote,
-					Author:   quoteResponse.Author,
-					Category: quoteResponse.Category,
+					Request:   wsRequest.Request,
+					Timestamp: timestamp,
+					Quote:     quoteResponse.Quote,
+					Author:    quoteResponse.Author,
+					Category:  quoteResponse.Category,
 				}
 
 				wsQuoteResponses = append(wsQuoteResponses, wsQuoteResponse)
@@ -83,19 +89,22 @@ func processQuoteRequest(wsRequest WSRequest) []WSQuoteResponse {
 func processDictionaryRequest(wsRequest WSRequest) *WSDictionaryResponse {
 	var dictResponse api.DictionaryResponse
 	var dictErr error
+	var timestamp string
 
-	dictErr, dictResponse = api.DictionaryRequest(wsRequest.Word)
+	dictErr, dictResponse, timestamp = api.DictionaryRequest(wsRequest.Word)
 
 	var wsDictResponse *WSDictionaryResponse
 	if dictErr != nil {
 		wsDictResponse = &WSDictionaryResponse{
-			Request: wsRequest.Request,
-			Error:   dictErr.Error(),
+			Request:   wsRequest.Request,
+			Timestamp: timestamp,
+			Error:     dictErr.Error(),
 		}
 
 	} else {
 		wsDictResponse = &WSDictionaryResponse{
 			Request:    wsRequest.Request,
+			Timestamp:  timestamp,
 			Definition: dictResponse.Definition,
 			Word:       dictResponse.Word,
 			Valid:      dictResponse.Valid,

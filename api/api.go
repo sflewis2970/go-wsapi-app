@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/sflewis2970/go-wsapi-app/common"
 )
@@ -69,7 +70,7 @@ func QuoteRequest(categoryStr string, limitStr string) (error, []QuoteResponse, 
 	defer response.Body.Close()
 
 	// Get timestamp right after receiving a valid request
-	timestamp := common.GetFormattedTime()
+	timestamp := common.GetFormattedTime(time.Now(), "Mon Jan 2 15:04:05 2006")
 
 	// Parse request body
 	body, readErr := ioutil.ReadAll(response.Body)
@@ -111,7 +112,7 @@ func DictionaryRequest(wordStr string) (error, DictionaryResponse, string) {
 	defer response.Body.Close()
 
 	// Get timestamp right after receiving a valid request
-	timestamp := common.GetFormattedTime()
+	timestamp := common.GetFormattedTime(time.Now(), "Mon Jan 2 15:04:05 2006")
 
 	body, readErr := ioutil.ReadAll(response.Body)
 	if readErr != nil {
